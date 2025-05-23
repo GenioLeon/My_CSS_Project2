@@ -1,0 +1,659 @@
+---
+title: "Amazon_Scraping_Project"
+format: html
+editor: visual
+execute:
+  eval: false
+---
+
+# Introduction
+
+E-commerce platforms such as Amazon have become an essential shopping habits for consumers. It reveals consumer preferences, seasonal trends, and cultural practices. For example, analysing products bought for major festivals can illuminate how spending patterns shift in response to cultural events. From a social science perspective, such data can highlight on consumer behaviour and marketing efficacy during festivals.
+
+
+# Automated Data Collection
+```{r}
+#| eval: True
+
+### Set up by importing packages ###
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+pacman::p_load(
+  RSelenium, # Browser automation
+  rvest, # HTML scraping
+  xml2,  # XML parsing
+  purrr, # Functional programming to map etc
+  dplyr, # For Data manipulation
+  ggplot2, # To plot graphs
+  plotly,  # Interactive plots
+  countrycode, # Country code 
+  robotstxt, # Web scraping ethics
+  janitor, # To clean data
+  skimr, # For data inspection
+  readr, # For parsing data
+  stringr # Dealing with string datatypes
+)
+```
+
+An automated web scraping approach was implemented using the RSelenium package. Began by initialising a Selenium server with a Firefox web driver. The target website “https://www.amazon.com/” , was accessed after confirming that scraping was permissible. This approach allowed for ethical and responsible data collection.
+
+```{r}
+### Connect to server browser ###
+# Start a Selenium server with Firefox driver
+rD <- rsDriver(browser = "firefox", port = 4555L)
+
+# Open a remote driver client
+remDr <- rD$client
+
+# Check whether the path is allowed to scrape
+paths_allowed(paths="https://www.amazon.com/")
+
+# Open the amazon url in firefox
+url <- "https://www.amazon.com/"
+remDr$navigate(url)
+Sys.sleep(3)  # wait for the page to load
+```
+
+The scraping logic was designed around a function: "get_amazon_search_gifts(festival)" to maximise reproducability. 
+
+```{r}
+### Set up a function to Perform a Search in the search box ###
+get_amazon_search_gifts <- function(festival) {
+  
+```
+
+The function simulated human behaviour by first identifies the Amazon search box using a CSS selector and clears any pre-existing content to prevent interference. The query is then entered using "sendKeysToElement()" method. The search button is located via another CSS selector and clicked using "clickElement()". Then a 3 second delay allowed the page to load fully before subsequent actions, ensuring the access of complete and accurate data.
+
+```{r}
+  # Set the format for different search queries
+  query <- sprintf("%s gifts", festival)
+  
+  # Find the search box and search gift
+  search_box <- remDr$findElement(
+    using = "css selector", 
+    value = "#twotabsearchtextbox"
+  )
+  
+  # Clear the text in the search box
+  search_box$clearElement()
+  
+  # Enter the search query
+  search_box$sendKeysToElement(list(query))
+  
+  # Press the search button
+  search_button <- remDr$findElement(
+    using = "css selector", 
+    value = "#nav-search-submit-button"
+  )
+  search_button$clickElement()
+  Sys.sleep(3)
+  
+```
+
+By using XPath selectors, the function then identifies specific elements within the product containers on the page.
+
+```{r}
+  ## Extract Product's Information
+  
+  # Allow the page to be fully loaded
+  Sys.sleep(5)
+  
+  # Find all product containers
+  product_containers <- remDr$findElements(
+    "xpath", 
+    "//div[contains(@class, 'puis-card-container')]"
+  )
+  
+  # Initialise an empty list to store product details
+  product_details <- list()
+```
+
+Then, it iterates through all detected product containers to systematically collect data. And each extraction is employed with a "tryCatch()" method, which ensures that missing or problematic data would not disrupt the scraping process. For example, if a product container lacked a rating or price, "tryCatch()" would return "NA" instead of throwing an error that would halt the loop, which avoids the need for restarting the process to improve robustness and efficiency.
+
+```{r}
+  # Loop through each product container to extract product details
+  for (i in seq_along(product_containers)) {
+    
+    # Extract product name
+    product_name <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using="xpath", 
+        value=".//div[@data-cy='title-recipe']/a/h2/span")$getElementText()[[1]],
+      
+      # If error occurs, return NA instead of stopping the function:
+      error = function(e) NA
+    )
+
+    # Extract rating
+    rating <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='reviews-block']/div[1]/span[1]//a"
+      )$getElementAttribute("aria-label")[[1]],
+      error = function(e) NA
+    )
+    
+    rating_count <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='reviews-block']/div[1]/span[2]//a"
+      )$getElementAttribute("aria-label")[[1]],
+      error = function(e) NA
+    )
+    
+    # Extract bought count
+    bought_count <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='reviews-block']/div[2]//span"
+      )$getElementText()[[1]],
+      error = function(e) NA
+    )
+    
+    # Extract price
+    price <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='price-recipe']//span[contains(@class, 'a-price')]"
+      )$getElementText()[[1]],
+      error = function(e) NA
+    )
+    
+    # Extract delivery information
+    delivery_free <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='delivery-recipe']/div[1]/span[1]/span[1]"
+      )$getElementText()[[1]],
+      error = function(e) NA
+    )
+    
+    delivery_date <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='delivery-recipe']/div[1]/span[1]/span[2]"
+      )$getElementText()[[1]],
+      error = function(e) NA
+    )
+```
+
+After that, it appends the extracted product details into the empty list we created earlier,making it easier to convert the data into a dataframe for further analysis later.
+
+```{r}
+    # Append to the list
+    product_details <- append(product_details, list(
+      list(
+        Name = product_name,
+        Rating = rating,
+        RatingCount = rating_count,
+        BoughtCount = bought_count,
+        Price = price,
+        DeliveryFree = delivery_free,
+        DeliveryDate = delivery_date
+      )
+    ))
+  }
+```
+
+Furthermore, the function was built to handle 2 pages of results. Therefore, by locating and clicking the "Next" button and repeating the extracting process, it automatically navigates to the next page and appends the product details on that page to the list.
+
+```{r}
+  ### Press the next button ###
+  next_button <- remDr$findElement(
+    using = "css selector", 
+    value = ".s-pagination-next"
+  )
+  next_button$clickElement()
+  Sys.sleep(3)
+  
+  
+  
+  ### Perform scraping process again on the next page ###
+  Sys.sleep(5)
+  
+  # Find all product containers
+  product_containers <- remDr$findElements(
+    "xpath", 
+    "//div[contains(@class, 'puis-card-container')]"
+  )
+  
+  
+  # Loop through each product container to extract product details
+  for (i in seq_along(product_containers)) {
+    # Extract product name
+    product_name <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using="xpath", 
+        value=".//div[@data-cy='title-recipe']/a/h2/span")$getElementText()[[1]],
+      
+      # If error occurs, return NA instead of stopping the function:
+      error = function(e) NA
+    )
+    
+    # Extract rating
+    rating <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='reviews-block']/div[1]/span[1]//a"
+      )$getElementAttribute("aria-label")[[1]],
+      error = function(e) NA
+    )
+    
+    rating_count <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='reviews-block']/div[1]/span[2]//a"
+      )$getElementAttribute("aria-label")[[1]],
+      error = function(e) NA
+    )
+    
+    # Extract bought count
+    bought_count <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='reviews-block']/div[2]//span"
+      )$getElementText()[[1]],
+      error = function(e) NA
+    )
+    
+    # Extract price
+    price <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='price-recipe']//span[contains(@class, 'a-price')]"
+      )$getElementText()[[1]],
+      error = function(e) NA
+    )
+    
+    # Extract delivery information
+    delivery_free <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='delivery-recipe']/div[1]/span[1]/span[1]"
+      )$getElementText()[[1]],
+      error = function(e) NA
+    )
+    delivery_date <- tryCatch(
+      product_containers[[i]]$findChildElement(
+        using = "xpath", 
+        value = ".//div[@data-cy='delivery-recipe']/div[1]/span[1]/span[2]"
+      )$getElementText()[[1]],
+      error = function(e) NA
+    )
+    
+    # Append to the list
+    product_details <- append(product_details, list(
+      list(
+        Name = product_name,
+        Rating = rating,
+        RatingCount = rating_count,
+        BoughtCount = bought_count,
+        Price = price,
+        DeliveryFree = delivery_free,
+        DeliveryDate = delivery_date
+      )
+    ))
+  } 
+```
+
+After all, the function converts the list of product details into a structured data frame using the "map()" function. Each sub-list, representing a single product, is transformed into a tibble, and these tibbles are row-bounded to form a data frame. Then it creates a column "festival" to make sure that each product is associated with its respective festival, in order to identify different festivals for the visualisation part later on.
+
+```{r}
+  # Convert the list to a data frame
+  product_df <- purrr::map_dfr(product_details, as_tibble)
+  product_df$festival = festival
+```
+
+Finally, the function ends by returning the data frame of the extracted product information.
+
+```{r}
+  return(product_df)
+} # Here the whole function ends
+```
+
+Once the queries were passed into the function and the data for each festival was collected, those individual datasets returned by the function were combined into a single dataset using the "bind_rows()" function. Then exported as a csv file for subsequent analysis.
+
+```{r}
+### Call scraping function: ###
+## 1. Valentine's Day
+df_valentine <- get_amazon_search_gifts("Valentine's Day")
+
+## 2. Christmas
+df_christmas <- get_amazon_search_gifts("Christmas")
+
+## 3. New Year
+df_newyear <- get_amazon_search_gifts("New Year")
+
+# Combine and save scraped data ###
+df_combined <- bind_rows(df_valentine, df_christmas, df_newyear)
+write.csv(df_combined, "amazon_data.csv")
+```
+
+After compeleting the scraping process, the Selenium sessions is properly terminated by using the **"close()"** function which closes the remote Web Driver client that was used for scraping. And the **"rD$server\$stop()"** function, which stops the Selenium server continue running in the background to prevent resource leakage and ensure that the system remains stable.
+
+```{r}
+# Close the browser and stop the server when done
+remDr$close()
+rD$server$stop()  
+```
+
+
+
+::: panel-tabset
+# Data Exploration
+Data wrangling was then taken before visualisations. The first step involved selecting only the variables relevant to the analysis; therefore the variable **delivery date** was removed.
+
+Numeric values were then extracted from character data fields using the **"parse_number()"** function. However, the **BoughtCount** column, which contained textual representations, was transformed into numerical values by interpreting "K" as 1000, then into categories.
+
+Rows with missing data in the **Price** or **Rating columns**, were removed to maintain integrity. Ultimately, the cleaned dataset was saved as **"Cleaned_amazon_data.csv"** to use in the interactive dashboard.
+
+```{r}
+df_combined <- bind_rows(df_valentine, df_christmas, df_newyear)
+write.csv(df_combined, "amazon_data.csv")
+df_combined <- read.csv("amazon_data.csv")
+
+### Data Wrangling ###
+cleaned_data <- df_combined %>%
+  
+  # Only select those useful variables:
+  select(!DeliveryDate) %>%
+  
+  # Extract numeric values from different variables:
+  mutate(
+    
+    # Parsing the numeric values of the variables used:
+    Rating = parse_number(Rating),
+    
+    RatingCount = parse_number(RatingCount),
+    
+    # ChatGPT suggestted this method by using regular expressions, so it can keep the decimals: Clean Price (handle format like "$9\n99" or "$103\n99")
+    Price = as.numeric(str_remove_all(Price, "\\$|\\s|\\n")) / 100,
+    
+    # First parse the raw number, ignoring plus signs or other text.
+    # e.g., "1K+" -> 1, "250+" -> 250, "2.5K+" -> 2.5, etc.
+    count = parse_number(BoughtCount),
+    
+    # If the text contains 'K', multiply the parsed number by 1000, otherwise return itself.
+    count = if_else(str_detect(BoughtCount, "K"), count * 1000, count),
+    
+    # Now bin into categories based on numeric thresholds
+    BoughtCount = case_when(
+      count >= 10000 ~ "Over 10000",
+      count >= 1000 ~ "Over 1000",
+      count >= 100  ~ "100-1000",
+      TRUE ~ "Less than 100",
+    )
+  ) %>%
+  
+  # Remove rows with NA in Price or Rating:
+  filter(!is.na(Price), !is.na(Rating))
+
+rite.csv(cleaned_data, "Cleaned_amazon_data.csv")
+
+```
+
+# Inspecting the Dataset
+```{r}
+# Inspect the cleaned dataset
+glimpse(cleaned_data) 
+skim(cleaned_data)
+```
+:::
+
+# Part 2-A: R Shiny
+
+::: panel-tabset
+## Setup:
+The cleaned dataset was used to create an interactive dashboard using R Shiny.
+```{r}
+#package uploading 
+if (!require(shiny)) install.packages("shiny")
+if (!require(ggplot2)) install.packages("ggplot2")
+if (!require(dplyr)) install.packages("dplyr")
+if (!require(plotly)) install.packages("plotly")
+if (!require(DT)) install.packages("DT")
+
+library(shiny) 
+library(ggplot2) # To plot graphs
+library(dplyr) # For data wrangling
+library(plotly) # Interactive plot
+library(DT) # Interactive data tables
+
+# Import data
+data <- read.csv("Cleaned_amazon_data.csv") # Load the dataset we cleaned from the scraping
+options(scipen = 999) 
+```
+
+The **User Interface** is structured with a **sidebar** for filtering options and a main panel for visualisations. Users can filter the dataset based on selected festivals and custom price range.
+```{r}
+# UI
+ui <- fluidPage(
+  titlePanel("Amazon Festival Gifts Analysis"),
+  
+  sidebarLayout(
+    # Sidebar panel for user inputs
+    sidebarPanel(
+      # Create dropdown menu with festival names
+      selectInput("festival_filter", "Select one or more Festivals:",
+                  choices = unique(data$festival), 
+                  multiple = TRUE, # Allow multiple selections
+                  selected = c() # Default: no festival selected
+      ),
+      
+      # Slider to filter by price range:
+      sliderInput("price_range", "Price Range (£):",
+                  min = 0, max = max(data$Price, na.rm = TRUE), # Set minimum and maximum price
+                  value = c(0, max(data$Price, na.rm = TRUE))) # Default range: full range
+    ),
+    
+    # Create a main panel for displaying the visualisations:
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Price Distribution",
+                 plotOutput("price_dist_plot")),
+        tabPanel("Rating vs Price",
+                 plotOutput("rating_price_plot")),
+        tabPanel("Popular Products",
+                 plotOutput("popularity_plot")),
+        tabPanel("Data Table",
+                 DTOutput("data_table"))
+      )
+    )
+  )
+)
+```
+
+## Set up the server:
+```{r}
+# Server
+server <- function(input, output) {
+  
+  # Filtered dataset by using the input from the sidebar:
+  filtered_data <- reactive({
+    data %>%
+      filter(festival %in% input$festival_filter,
+             Price >= input$price_range[1],
+             Price <= input$price_range[2])
+  })
+```
+
+## Visualisation 1:
+
+The price distribution plot, provided a detailed view of the price ranges for gifts across different festivals. It shows variations in price trends, allowing users to compare the distribution of prices for each festival which highlights economic and cultural differences in gift-giving practices. And emphasises how consumer spending adapts to the cultural context or social norms of each festival.
+```{r}
+  # Price Distribution Plot
+  output$price_dist_plot <- renderPlot({
+    ggplot(filtered_data(), aes(x = Price)) +
+      geom_density(aes(col=festival, fill=festival), alpha=.1, lwd=.8) +
+      scale_fill_brewer("Festival", palette="Set1") +
+      scale_color_brewer("Festival", palette="Set1") +
+      theme_minimal() +
+      labs(title = "Price Distribution by Festival",
+           x = "Price (£)",
+           y = "Count") +
+      scale_y_continuous(labels = ~ . * 100) + # Multiply the y-axis by 100
+      theme(legend.position="top",
+            plot.title = element_text(hjust=.5, face="bold", size=12),
+            axis.text = element_text(color="black", size=12))
+  })
+```
+
+In the first specific visualisation chosen, the widest price distribution is observed for Christmas gifts, with a peak density between £20–£50, with a long tail toward higher price points.This suggests that Christmas includes both affordable options for general consumers and luxury gifts for special purposes. 
+
+However, A narrower price range with density concentrated under £30 reflects the lower cultural significance of gifting during the New Year. And the slightly higher prices extending into the luxury range reflects the romantic associations of Valentine’s Day, where symbolic or premium gifts are valued.
+![Example for Price distribution](Price Distribution.png "Example for Price distribution")
+
+
+
+## Visualisation 2:
+
+The rating vs price scatter plot, explored the relationship between product price and customer ratings. Regression lines was added to identify trends. This allowed users to assess the correlation between pricing and satisfaction across festivals. Which reveals consumer expectations and purchasing motivations. It shows the influence of cultural values on consumer behaviour, like affordability for New Year and sentimentality for Valentine’s Day.
+```{r}
+  # Rating vs Price Plot
+  output$rating_price_plot <- renderPlot({
+    ggplot(filtered_data(), aes(x = Price, y = Rating, color = festival)) +
+      geom_point(alpha = 0.6) +
+      geom_smooth(method = "lm", se = FALSE) +
+      theme_minimal() +
+      labs(title = "Rating vs Price by Festival",
+           x = "Price (£)",
+           y = "Rating") +
+      scale_color_brewer("Festival", palette = "Set1") +
+      theme(legend.position="top",
+            plot.title = element_text(hjust=.5, face="bold", size=12),
+            axis.text = element_text(color="black", size=12))
+  })
+```
+
+In the second specific visualisation chosen, where ratings for Christmas and valentine's gifts are relatively consistent across price. Indicating that price has little impact on ratings. Emotional value might outweigh considerations of cost, reflecting the importance of Christmas and the intimate nature of Valentine's day. But the slight decline as prices increase reflects that higher-priced gifts fail to meet heightened expectations.
+
+However, a sharper negative correlation between price and ratings for New Year gifts suggests that consumers prioritise affordability over extravagance, leading to dissatisfaction with expensive New Year gifts.
+![Example for Rating vs Price](Rating vs Price.png "Example for Rating vs Price")
+
+
+
+
+## Visualisation 3:
+
+The product popularity bar chart effectively displayed the distribution of products across different BoughtCount for each festival. Showing the purchasing trend and highlighting popular gift choices during festive seasons. By categorising products based on purchasing frequency, the chart offered a clear view of consumer preferences. Which provids signals for inventory management and marketing strategies. For example, retailers could stock a higher volume of popular items during Christmas, whereas to maintain a balanced inventory to cater to diverse consumer preferences in other 2 festivals.
+```{r}
+  # Popularity Plot
+  # Group and summarise data for the bar chart:
+  output$popularity_plot <- renderPlot({
+    popularity_data <- filtered_data() %>%
+      group_by(festival, BoughtCount) %>%      # Categorise by festival and BoughtCount
+      summarise(count = n(), .groups = "drop") # Count the number of products in each category
+    
+    ggplot(popularity_data, 
+           aes(x = festival, y = count, fill = BoughtCount)) +
+      geom_col(width=.5, col="black", alpha=.7, position = "dodge") +
+      theme_minimal() +
+      labs(title = "Product Popularity by Festival",
+           x = "Festival",
+           y = "Number of Products") +
+      scale_fill_brewer(palette = "Set2") +
+      theme(legend.position="top",
+            plot.title = element_text(hjust=.5, face="bold", size=12),
+            axis.text = element_text(color="black", size=12))
+  })
+```
+
+For the specific visualisation chosen, Christmas gifts showed huge popularity, with most products are in the “Over 10,000” category. This reflects the cultural significance of Christmas as a season of giving, which drives high consumer demand. Whereas for New Year, the majority of products fall into the “100–1000” categories, indicating relatively low consumer engagement. This aligns with New Year’s focus on celebration rather than material exchanges.
+
+However, a balanced distribution of Valentine's gifts across all categories reflects the diverse ways people celebrate Valentine’s Day, from kisses to luxurious expressions of love.
+![Example for Rating vs Price](Popular products.png "Example for Rating vs Price")
+
+## Interactive data table:
+
+The final component of the dashboard was an interactive data table. This table allowed users to browse the dataset, apply filters, and sort columns to explore specific details. It served as a complementary tool for users who wanted to delve deeper into the raw data.
+```{r}
+  # Interactive Data Table
+  output$data_table <- renderDT({
+    filtered_data() %>%
+      select(Name, Rating, RatingCount, Price, festival, BoughtCount, DeliveryFree) %>%
+      datatable(options = list(pageLength = 10)) # Formating the table with pages (10 rows per page)
+  })
+}
+```
+
+
+## Lounch the app:
+```{r}
+# Combine the UI and Server to launch the app
+shinyApp(ui = ui, server = server)
+```
+
+:::
+
+# AI engagement
+
+One of the key contributions of ChatGPT was its assistance in improving the robustness of the web scraping script. My original approach failed whenever a product did not include a rating, and halts the entire function. 
+```{r}
+# Original code without error handling
+rating <- product_containers[[i]]$findChildElement(
+    using = "xpath", 
+    value = ".//div[@data-cy='reviews-block']/div[1]/span[1]//a"
+)$getElementAttribute("aria-label")[[1]]
+```
+
+ChatGPT suggested the use of **tryCatch()** method, ensuring it continues executing even when some data fields were missing. So it is easier to adapt to variations in the webpage’s structure.
+```{r}
+# Improved code with error handling
+rating <- tryCatch(
+  product_containers[[i]]$findChildElement(
+    using = "xpath", 
+    value = ".//div[@data-cy='reviews-block']/div[1]/span[1]//a"
+  )$getElementAttribute("aria-label")[[1]],
+  error = function(e) NA
+)
+```
+
+
+Furthermore, my original method for cleaning the Price variable relied on **parse_number()** method to extract numeric values. However, this approach removed decimals, leading to inaccuracies in the cleaned dataset.
+```{r}
+# Original code
+Price = parse_number(Price),
+```
+
+ChatGPT recommended to regular expressions to handle complex price formats (e.g. **"$9\n99"** or **"$103\n99"**) while keeping decimal values ensuring accuracy.
+```{r}
+# Improved code
+Price = as.numeric(str_remove_all(Price, "\\$|\\s|\\n")) / 100
+```
+
+
+Also, in my original method for categorising the BoughtCount variable, regular expressions were used to detect specific patterns such as "K+" or numeric values followed by "+". This approach was limited when producing higher thresholds catagories like "10K+" or beyond.
+```{r}
+# Original code:
+BoughtCount = case_when(
+  # K\\+ to detect any strings that contain "k" followed immediately by a "+" sign
+  str_detect(BoughtCount, "K\\+") ~ "Over 1000",
+  # \\d+\\+ to detect any strings that contain a digit sequence followed immediately by a "+" signb 
+  str_detect(BoughtCount, "\\d+\\+") ~ "100-1000",
+  TRUE ~ "Less than 100"
+)
+```
+
+ChatGPT suggested a more scalable method by first parsing numeric values and then categorising them based on predefined thresholds. This allowed for greater flexibility and accuracy, including the ability to handle other complex formats.
+```{r}
+# First parse the raw number, ignoring plus signs or other text (e.g. "2.5K+" -> 2.5, etc).
+count = parse_number(BoughtCount)
+# If the text contains 'K', multiply the parsed number by 1000, otherwise return itself.
+count = if_else(str_detect(BoughtCount, "K"), count * 1000, count)
+# Then bin into categories based on numeric thresholds
+BoughtCount = case_when(
+  count >= 10000 ~ "Over 10000",
+  count >= 1000 ~ "Over 1000",
+  count >= 100 ~ "100-1000",
+  TRUE ~ "Less than 100"
+)
+```
+
+In the visualisation section, ChatGPT suggested scaling the y-axis by a factor of 100 in the price distribution plot. This adjustment improved the readability of the plot and made it easier for users to interpret the data.
+
+While ChatGPT offered valuable assistance in refining my coding techniques, it also had certain limitations. Certain suggestions, like categorising the "BoughtCount" variable with regular expressions, was efficient but initially unfamiliar. These suggesttions can be hard to understand and demanded extra time to study and understand the logic, which could be a barrier for many researchers in such techniques, particularly when doing time-constrained projects.
+
+Overall, ChatGPT significantly improved the project’s efficiency and accuracy while broadening my understanding of computational tools and best practices. The advanced techniques suggested, like **tryCatch()** for error handling or refining data transformations with regular expressions, introduced me to new concepts, which gave me confidence in tackling complex problems. Despite the occasional complexity of its suggestions may require additional learning to implement, these highlight the importance of human oversight. Which reinforced my role as a decision maker, balancing AI-driven suggestions with practical feasibility.
+
+
+
+

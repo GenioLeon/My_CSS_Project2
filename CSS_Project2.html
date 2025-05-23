@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Amazon_Scraping_Project</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="CSS_Project2_files/libs/clipboard/clipboard.min.js"></script>
+<script src="CSS_Project2_files/libs/quarto-html/quarto.js"></script>
+<script src="CSS_Project2_files/libs/quarto-html/popper.min.js"></script>
+<script src="CSS_Project2_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="CSS_Project2_files/libs/quarto-html/anchor.min.js"></script>
+<link href="CSS_Project2_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="CSS_Project2_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="CSS_Project2_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="CSS_Project2_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="CSS_Project2_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Amazon_Scraping_Project</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="introduction" class="level1">
+<h1>Introduction</h1>
+<p>E-commerce platforms such as Amazon have become an essential shopping habits for consumers. It reveals consumer preferences, seasonal trends, and cultural practices. For example, analysing products bought for major festivals can illuminate how spending patterns shift in response to cultural events. From a social science perspective, such data can highlight on consumer behaviour and marketing efficacy during festivals.</p>
+</section>
+<section id="automated-data-collection" class="level1">
+<h1>Automated Data Collection</h1>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="do">### Set up by importing packages </span><span class="al">###</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">requireNamespace</span>(<span class="st">"pacman"</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) <span class="fu">install.packages</span>(<span class="st">"pacman"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  RSelenium, <span class="co"># Browser automation</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  rvest, <span class="co"># HTML scraping</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  xml2,  <span class="co"># XML parsing</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  purrr, <span class="co"># Functional programming to map etc</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  dplyr, <span class="co"># For Data manipulation</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  ggplot2, <span class="co"># To plot graphs</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  plotly,  <span class="co"># Interactive plots</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  countrycode, <span class="co"># Country code </span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  robotstxt, <span class="co"># Web scraping ethics</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  janitor, <span class="co"># To clean data</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  skimr, <span class="co"># For data inspection</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  readr, <span class="co"># For parsing data</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  stringr <span class="co"># Dealing with string datatypes</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>An automated web scraping approach was implemented using the RSelenium package. Began by initialising a Selenium server with a Firefox web driver. The target website “https://www.amazon.com/” , was accessed after confirming that scraping was permissible. This approach allowed for ethical and responsible data collection.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="do">### Connect to server browser </span><span class="al">###</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Start a Selenium server with Firefox driver</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>rD <span class="ot">&lt;-</span> <span class="fu">rsDriver</span>(<span class="at">browser =</span> <span class="st">"firefox"</span>, <span class="at">port =</span> 4555L)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Open a remote driver client</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>remDr <span class="ot">&lt;-</span> rD<span class="sc">$</span>client</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Check whether the path is allowed to scrape</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">paths_allowed</span>(<span class="at">paths=</span><span class="st">"https://www.amazon.com/"</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Open the amazon url in firefox</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>url <span class="ot">&lt;-</span> <span class="st">"https://www.amazon.com/"</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>remDr<span class="sc">$</span><span class="fu">navigate</span>(url)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.sleep</span>(<span class="dv">3</span>)  <span class="co"># wait for the page to load</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The scraping logic was designed around a function: “get_amazon_search_gifts(festival)” to maximise reproducability.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="do">### Set up a function to Perform a Search in the search box </span><span class="al">###</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>get_amazon_search_gifts <span class="ot">&lt;-</span> <span class="cf">function</span>(festival) {</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The function simulated human behaviour by first identifies the Amazon search box using a CSS selector and clears any pre-existing content to prevent interference. The query is then entered using “sendKeysToElement()” method. The search button is located via another CSS selector and clicked using “clickElement()”. Then a 3 second delay allowed the page to load fully before subsequent actions, ensuring the access of complete and accurate data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Set the format for different search queries</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  query <span class="ot">&lt;-</span> <span class="fu">sprintf</span>(<span class="st">"%s gifts"</span>, festival)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Find the search box and search gift</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  search_box <span class="ot">&lt;-</span> remDr<span class="sc">$</span><span class="fu">findElement</span>(</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">using =</span> <span class="st">"css selector"</span>, </span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> <span class="st">"#twotabsearchtextbox"</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Clear the text in the search box</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  search_box<span class="sc">$</span><span class="fu">clearElement</span>()</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Enter the search query</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  search_box<span class="sc">$</span><span class="fu">sendKeysToElement</span>(<span class="fu">list</span>(query))</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Press the search button</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  search_button <span class="ot">&lt;-</span> remDr<span class="sc">$</span><span class="fu">findElement</span>(</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">using =</span> <span class="st">"css selector"</span>, </span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> <span class="st">"#nav-search-submit-button"</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  search_button<span class="sc">$</span><span class="fu">clickElement</span>()</span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Sys.sleep</span>(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>By using XPath selectors, the function then identifies specific elements within the product containers on the page.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>  <span class="do">## Extract Product's Information</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Allow the page to be fully loaded</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Sys.sleep</span>(<span class="dv">5</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Find all product containers</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  product_containers <span class="ot">&lt;-</span> remDr<span class="sc">$</span><span class="fu">findElements</span>(</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="st">"xpath"</span>, </span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"//div[contains(@class, 'puis-card-container')]"</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Initialise an empty list to store product details</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  product_details <span class="ot">&lt;-</span> <span class="fu">list</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Then, it iterates through all detected product containers to systematically collect data. And each extraction is employed with a “tryCatch()” method, which ensures that missing or problematic data would not disrupt the scraping process. For example, if a product container lacked a rating or price, “tryCatch()” would return “NA” instead of throwing an error that would halt the loop, which avoids the need for restarting the process to improve robustness and efficiency.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Loop through each product container to extract product details</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(product_containers)) {</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract product name</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    product_name <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">using=</span><span class="st">"xpath"</span>, </span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">value=</span><span class="st">".//div[@data-cy='title-recipe']/a/h2/span"</span>)<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>      <span class="co"># If error occurs, return NA instead of stopping the function:</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract rating</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    rating <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='reviews-block']/div[1]/span[1]//a"</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementAttribute</span>(<span class="st">"aria-label"</span>)[[<span class="dv">1</span>]],</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    rating_count <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='reviews-block']/div[1]/span[2]//a"</span></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementAttribute</span>(<span class="st">"aria-label"</span>)[[<span class="dv">1</span>]],</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract bought count</span></span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>    bought_count <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='reviews-block']/div[2]//span"</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract price</span></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>    price <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='price-recipe']//span[contains(@class, 'a-price')]"</span></span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb6-47"><a href="#cb6-47" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-48"><a href="#cb6-48" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-49"><a href="#cb6-49" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract delivery information</span></span>
+<span id="cb6-50"><a href="#cb6-50" aria-hidden="true" tabindex="-1"></a>    delivery_free <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb6-51"><a href="#cb6-51" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb6-52"><a href="#cb6-52" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb6-53"><a href="#cb6-53" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='delivery-recipe']/div[1]/span[1]/span[1]"</span></span>
+<span id="cb6-54"><a href="#cb6-54" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb6-55"><a href="#cb6-55" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb6-56"><a href="#cb6-56" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb6-57"><a href="#cb6-57" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb6-58"><a href="#cb6-58" aria-hidden="true" tabindex="-1"></a>    delivery_date <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb6-59"><a href="#cb6-59" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb6-60"><a href="#cb6-60" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb6-61"><a href="#cb6-61" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='delivery-recipe']/div[1]/span[1]/span[2]"</span></span>
+<span id="cb6-62"><a href="#cb6-62" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb6-63"><a href="#cb6-63" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb6-64"><a href="#cb6-64" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>After that, it appends the extracted product details into the empty list we created earlier,making it easier to convert the data into a dataframe for further analysis later.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Append to the list</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    product_details <span class="ot">&lt;-</span> <span class="fu">append</span>(product_details, <span class="fu">list</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>      <span class="fu">list</span>(</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">Name =</span> product_name,</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">Rating =</span> rating,</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">RatingCount =</span> rating_count,</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">BoughtCount =</span> bought_count,</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">Price =</span> price,</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">DeliveryFree =</span> delivery_free,</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        <span class="at">DeliveryDate =</span> delivery_date</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>  <span class="er">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Furthermore, the function was built to handle 2 pages of results. Therefore, by locating and clicking the “Next” button and repeating the extracting process, it automatically navigates to the next page and appends the product details on that page to the list.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>  <span class="do">### Press the next button </span><span class="al">###</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  next_button <span class="ot">&lt;-</span> remDr<span class="sc">$</span><span class="fu">findElement</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">using =</span> <span class="st">"css selector"</span>, </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> <span class="st">".s-pagination-next"</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  next_button<span class="sc">$</span><span class="fu">clickElement</span>()</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Sys.sleep</span>(<span class="dv">3</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="do">### Perform scraping process again on the next page </span><span class="al">###</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">Sys.sleep</span>(<span class="dv">5</span>)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Find all product containers</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  product_containers <span class="ot">&lt;-</span> remDr<span class="sc">$</span><span class="fu">findElements</span>(</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">"xpath"</span>, </span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">"//div[contains(@class, 'puis-card-container')]"</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Loop through each product container to extract product details</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(product_containers)) {</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract product name</span></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>    product_name <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>        <span class="at">using=</span><span class="st">"xpath"</span>, </span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>        <span class="at">value=</span><span class="st">".//div[@data-cy='title-recipe']/a/h2/span"</span>)<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>      <span class="co"># If error occurs, return NA instead of stopping the function:</span></span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract rating</span></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>    rating <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb8-36"><a href="#cb8-36" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb8-37"><a href="#cb8-37" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='reviews-block']/div[1]/span[1]//a"</span></span>
+<span id="cb8-38"><a href="#cb8-38" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementAttribute</span>(<span class="st">"aria-label"</span>)[[<span class="dv">1</span>]],</span>
+<span id="cb8-39"><a href="#cb8-39" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb8-40"><a href="#cb8-40" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-41"><a href="#cb8-41" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-42"><a href="#cb8-42" aria-hidden="true" tabindex="-1"></a>    rating_count <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb8-43"><a href="#cb8-43" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb8-44"><a href="#cb8-44" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb8-45"><a href="#cb8-45" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='reviews-block']/div[1]/span[2]//a"</span></span>
+<span id="cb8-46"><a href="#cb8-46" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementAttribute</span>(<span class="st">"aria-label"</span>)[[<span class="dv">1</span>]],</span>
+<span id="cb8-47"><a href="#cb8-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb8-48"><a href="#cb8-48" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-49"><a href="#cb8-49" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-50"><a href="#cb8-50" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract bought count</span></span>
+<span id="cb8-51"><a href="#cb8-51" aria-hidden="true" tabindex="-1"></a>    bought_count <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb8-52"><a href="#cb8-52" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb8-53"><a href="#cb8-53" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb8-54"><a href="#cb8-54" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='reviews-block']/div[2]//span"</span></span>
+<span id="cb8-55"><a href="#cb8-55" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb8-56"><a href="#cb8-56" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb8-57"><a href="#cb8-57" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-58"><a href="#cb8-58" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-59"><a href="#cb8-59" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract price</span></span>
+<span id="cb8-60"><a href="#cb8-60" aria-hidden="true" tabindex="-1"></a>    price <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb8-61"><a href="#cb8-61" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb8-62"><a href="#cb8-62" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb8-63"><a href="#cb8-63" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='price-recipe']//span[contains(@class, 'a-price')]"</span></span>
+<span id="cb8-64"><a href="#cb8-64" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb8-65"><a href="#cb8-65" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb8-66"><a href="#cb8-66" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-67"><a href="#cb8-67" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-68"><a href="#cb8-68" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract delivery information</span></span>
+<span id="cb8-69"><a href="#cb8-69" aria-hidden="true" tabindex="-1"></a>    delivery_free <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb8-70"><a href="#cb8-70" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb8-71"><a href="#cb8-71" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb8-72"><a href="#cb8-72" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='delivery-recipe']/div[1]/span[1]/span[1]"</span></span>
+<span id="cb8-73"><a href="#cb8-73" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb8-74"><a href="#cb8-74" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb8-75"><a href="#cb8-75" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-76"><a href="#cb8-76" aria-hidden="true" tabindex="-1"></a>    delivery_date <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb8-77"><a href="#cb8-77" aria-hidden="true" tabindex="-1"></a>      product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb8-78"><a href="#cb8-78" aria-hidden="true" tabindex="-1"></a>        <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb8-79"><a href="#cb8-79" aria-hidden="true" tabindex="-1"></a>        <span class="at">value =</span> <span class="st">".//div[@data-cy='delivery-recipe']/div[1]/span[1]/span[2]"</span></span>
+<span id="cb8-80"><a href="#cb8-80" aria-hidden="true" tabindex="-1"></a>      )<span class="sc">$</span><span class="fu">getElementText</span>()[[<span class="dv">1</span>]],</span>
+<span id="cb8-81"><a href="#cb8-81" aria-hidden="true" tabindex="-1"></a>      <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb8-82"><a href="#cb8-82" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb8-83"><a href="#cb8-83" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb8-84"><a href="#cb8-84" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Append to the list</span></span>
+<span id="cb8-85"><a href="#cb8-85" aria-hidden="true" tabindex="-1"></a>    product_details <span class="ot">&lt;-</span> <span class="fu">append</span>(product_details, <span class="fu">list</span>(</span>
+<span id="cb8-86"><a href="#cb8-86" aria-hidden="true" tabindex="-1"></a>      <span class="fu">list</span>(</span>
+<span id="cb8-87"><a href="#cb8-87" aria-hidden="true" tabindex="-1"></a>        <span class="at">Name =</span> product_name,</span>
+<span id="cb8-88"><a href="#cb8-88" aria-hidden="true" tabindex="-1"></a>        <span class="at">Rating =</span> rating,</span>
+<span id="cb8-89"><a href="#cb8-89" aria-hidden="true" tabindex="-1"></a>        <span class="at">RatingCount =</span> rating_count,</span>
+<span id="cb8-90"><a href="#cb8-90" aria-hidden="true" tabindex="-1"></a>        <span class="at">BoughtCount =</span> bought_count,</span>
+<span id="cb8-91"><a href="#cb8-91" aria-hidden="true" tabindex="-1"></a>        <span class="at">Price =</span> price,</span>
+<span id="cb8-92"><a href="#cb8-92" aria-hidden="true" tabindex="-1"></a>        <span class="at">DeliveryFree =</span> delivery_free,</span>
+<span id="cb8-93"><a href="#cb8-93" aria-hidden="true" tabindex="-1"></a>        <span class="at">DeliveryDate =</span> delivery_date</span>
+<span id="cb8-94"><a href="#cb8-94" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb8-95"><a href="#cb8-95" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb8-96"><a href="#cb8-96" aria-hidden="true" tabindex="-1"></a>  } </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>After all, the function converts the list of product details into a structured data frame using the “map()” function. Each sub-list, representing a single product, is transformed into a tibble, and these tibbles are row-bounded to form a data frame. Then it creates a column “festival” to make sure that each product is associated with its respective festival, in order to identify different festivals for the visualisation part later on.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Convert the list to a data frame</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  product_df <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map_dfr</span>(product_details, as_tibble)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  product_df<span class="sc">$</span>festival <span class="ot">=</span> festival</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Finally, the function ends by returning the data frame of the extracted product information.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(product_df)</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="er">}</span> <span class="co"># Here the whole function ends</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Once the queries were passed into the function and the data for each festival was collected, those individual datasets returned by the function were combined into a single dataset using the “bind_rows()” function. Then exported as a csv file for subsequent analysis.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="do">### Call scraping function: </span><span class="al">###</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="do">## 1. Valentine's Day</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>df_valentine <span class="ot">&lt;-</span> <span class="fu">get_amazon_search_gifts</span>(<span class="st">"Valentine's Day"</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="do">## 2. Christmas</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>df_christmas <span class="ot">&lt;-</span> <span class="fu">get_amazon_search_gifts</span>(<span class="st">"Christmas"</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="do">## 3. New Year</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>df_newyear <span class="ot">&lt;-</span> <span class="fu">get_amazon_search_gifts</span>(<span class="st">"New Year"</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine and save scraped data </span><span class="al">###</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>df_combined <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(df_valentine, df_christmas, df_newyear)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(df_combined, <span class="st">"amazon_data.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>After compeleting the scraping process, the Selenium sessions is properly terminated by using the <strong>“close()”</strong> function which closes the remote Web Driver client that was used for scraping. And the <strong>“rD$server$stop()”</strong> function, which stops the Selenium server continue running in the background to prevent resource leakage and ensure that the system remains stable.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Close the browser and stop the server when done</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>remDr<span class="sc">$</span><span class="fu">close</span>()</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>rD<span class="sc">$</span>server<span class="sc">$</span><span class="fu">stop</span>()  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Data Exploration</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Inspecting the Dataset</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<p>Data wrangling was then taken before visualisations. The first step involved selecting only the variables relevant to the analysis; therefore the variable <strong>delivery date</strong> was removed.</p>
+<p>Numeric values were then extracted from character data fields using the <strong>“parse_number()”</strong> function. However, the <strong>BoughtCount</strong> column, which contained textual representations, was transformed into numerical values by interpreting “K” as 1000, then into categories.</p>
+<p>Rows with missing data in the <strong>Price</strong> or <strong>Rating columns</strong>, were removed to maintain integrity. Ultimately, the cleaned dataset was saved as <strong>“Cleaned_amazon_data.csv”</strong> to use in the interactive dashboard.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>df_combined <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(df_valentine, df_christmas, df_newyear)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write.csv</span>(df_combined, <span class="st">"amazon_data.csv"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>df_combined <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"amazon_data.csv"</span>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="do">### Data Wrangling </span><span class="al">###</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>cleaned_data <span class="ot">&lt;-</span> df_combined <span class="sc">%&gt;%</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Only select those useful variables:</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">!</span>DeliveryDate) <span class="sc">%&gt;%</span></span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Extract numeric values from different variables:</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Parsing the numeric values of the variables used:</span></span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">Rating =</span> <span class="fu">parse_number</span>(Rating),</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">RatingCount =</span> <span class="fu">parse_number</span>(RatingCount),</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ChatGPT suggestted this method by using regular expressions, so it can keep the decimals: Clean Price (handle format like "$9\n99" or "$103\n99")</span></span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">Price =</span> <span class="fu">as.numeric</span>(<span class="fu">str_remove_all</span>(Price, <span class="st">"</span><span class="sc">\\</span><span class="st">$|</span><span class="sc">\\</span><span class="st">s|</span><span class="sc">\\</span><span class="st">n"</span>)) <span class="sc">/</span> <span class="dv">100</span>,</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># First parse the raw number, ignoring plus signs or other text.</span></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># e.g., "1K+" -&gt; 1, "250+" -&gt; 250, "2.5K+" -&gt; 2.5, etc.</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">count =</span> <span class="fu">parse_number</span>(BoughtCount),</span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># If the text contains 'K', multiply the parsed number by 1000, otherwise return itself.</span></span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">count =</span> <span class="fu">if_else</span>(<span class="fu">str_detect</span>(BoughtCount, <span class="st">"K"</span>), count <span class="sc">*</span> <span class="dv">1000</span>, count),</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Now bin into categories based on numeric thresholds</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">BoughtCount =</span> <span class="fu">case_when</span>(</span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>      count <span class="sc">&gt;=</span> <span class="dv">10000</span> <span class="sc">~</span> <span class="st">"Over 10000"</span>,</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>      count <span class="sc">&gt;=</span> <span class="dv">1000</span> <span class="sc">~</span> <span class="st">"Over 1000"</span>,</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>      count <span class="sc">&gt;=</span> <span class="dv">100</span>  <span class="sc">~</span> <span class="st">"100-1000"</span>,</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Less than 100"</span>,</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Remove rows with NA in Price or Rating:</span></span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(Price), <span class="sc">!</span><span class="fu">is.na</span>(Rating))</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a><span class="fu">rite.csv</span>(cleaned_data, <span class="st">"Cleaned_amazon_data.csv"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Inspect the cleaned dataset</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(cleaned_data) </span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a><span class="fu">skim</span>(cleaned_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="part-2-a-r-shiny" class="level1">
+<h1>Part 2-A: R Shiny</h1>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true" href="">Setup:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false" href="">Set up the server:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-3" role="tab" aria-controls="tabset-2-3" aria-selected="false" href="">Visualisation 1:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-4" role="tab" aria-controls="tabset-2-4" aria-selected="false" href="">Visualisation 2:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-5-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-5" role="tab" aria-controls="tabset-2-5" aria-selected="false" href="">Visualisation 3:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-6-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-6" role="tab" aria-controls="tabset-2-6" aria-selected="false" href="">Interactive data table:</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-7-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-7" role="tab" aria-controls="tabset-2-7" aria-selected="false" href="">Lounch the app:</a></li></ul>
+<div class="tab-content">
+<div id="tabset-2-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
+<p>The cleaned dataset was used to create an interactive dashboard using R Shiny.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">#package uploading </span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(shiny)) <span class="fu">install.packages</span>(<span class="st">"shiny"</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(ggplot2)) <span class="fu">install.packages</span>(<span class="st">"ggplot2"</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(dplyr)) <span class="fu">install.packages</span>(<span class="st">"dplyr"</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(plotly)) <span class="fu">install.packages</span>(<span class="st">"plotly"</span>)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(DT)) <span class="fu">install.packages</span>(<span class="st">"DT"</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(shiny) </span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2) <span class="co"># To plot graphs</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr) <span class="co"># For data wrangling</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(plotly) <span class="co"># Interactive plot</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DT) <span class="co"># Interactive data tables</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Import data</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"Cleaned_amazon_data.csv"</span>) <span class="co"># Load the dataset we cleaned from the scraping</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen =</span> <span class="dv">999</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The <strong>User Interface</strong> is structured with a <strong>sidebar</strong> for filtering options and a main panel for visualisations. Users can filter the dataset based on selected festivals and custom price range.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># UI</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>ui <span class="ot">&lt;-</span> <span class="fu">fluidPage</span>(</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">titlePanel</span>(<span class="st">"Amazon Festival Gifts Analysis"</span>),</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">sidebarLayout</span>(</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Sidebar panel for user inputs</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sidebarPanel</span>(</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Create dropdown menu with festival names</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">selectInput</span>(<span class="st">"festival_filter"</span>, <span class="st">"Select one or more Festivals:"</span>,</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>                  <span class="at">choices =</span> <span class="fu">unique</span>(data<span class="sc">$</span>festival), </span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>                  <span class="at">multiple =</span> <span class="cn">TRUE</span>, <span class="co"># Allow multiple selections</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>                  <span class="at">selected =</span> <span class="fu">c</span>() <span class="co"># Default: no festival selected</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>      ),</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>      </span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Slider to filter by price range:</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>      <span class="fu">sliderInput</span>(<span class="st">"price_range"</span>, <span class="st">"Price Range (£):"</span>,</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>                  <span class="at">min =</span> <span class="dv">0</span>, <span class="at">max =</span> <span class="fu">max</span>(data<span class="sc">$</span>Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="co"># Set minimum and maximum price</span></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>                  <span class="at">value =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fu">max</span>(data<span class="sc">$</span>Price, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))) <span class="co"># Default range: full range</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create a main panel for displaying the visualisations:</span></span>
+<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mainPanel</span>(</span>
+<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>      <span class="fu">tabsetPanel</span>(</span>
+<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tabPanel</span>(<span class="st">"Price Distribution"</span>,</span>
+<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">plotOutput</span>(<span class="st">"price_dist_plot"</span>)),</span>
+<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tabPanel</span>(<span class="st">"Rating vs Price"</span>,</span>
+<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">plotOutput</span>(<span class="st">"rating_price_plot"</span>)),</span>
+<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tabPanel</span>(<span class="st">"Popular Products"</span>,</span>
+<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">plotOutput</span>(<span class="st">"popularity_plot"</span>)),</span>
+<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>        <span class="fu">tabPanel</span>(<span class="st">"Data Table"</span>,</span>
+<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">DTOutput</span>(<span class="st">"data_table"</span>))</span>
+<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div id="tabset-2-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Server</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>server <span class="ot">&lt;-</span> <span class="cf">function</span>(input, output) {</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Filtered dataset by using the input from the sidebar:</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  filtered_data <span class="ot">&lt;-</span> <span class="fu">reactive</span>({</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    data <span class="sc">%&gt;%</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">filter</span>(festival <span class="sc">%in%</span> input<span class="sc">$</span>festival_filter,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>             Price <span class="sc">&gt;=</span> input<span class="sc">$</span>price_range[<span class="dv">1</span>],</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>             Price <span class="sc">&lt;=</span> input<span class="sc">$</span>price_range[<span class="dv">2</span>])</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  })</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div id="tabset-2-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-3-tab">
+<p>The price distribution plot, provided a detailed view of the price ranges for gifts across different festivals. It shows variations in price trends, allowing users to compare the distribution of prices for each festival which highlights economic and cultural differences in gift-giving practices. And emphasises how consumer spending adapts to the cultural context or social norms of each festival.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Price Distribution Plot</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>price_dist_plot <span class="ot">&lt;-</span> <span class="fu">renderPlot</span>({</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">filtered_data</span>(), <span class="fu">aes</span>(<span class="at">x =</span> Price)) <span class="sc">+</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_density</span>(<span class="fu">aes</span>(<span class="at">col=</span>festival, <span class="at">fill=</span>festival), <span class="at">alpha=</span>.<span class="dv">1</span>, <span class="at">lwd=</span>.<span class="dv">8</span>) <span class="sc">+</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_fill_brewer</span>(<span class="st">"Festival"</span>, <span class="at">palette=</span><span class="st">"Set1"</span>) <span class="sc">+</span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_color_brewer</span>(<span class="st">"Festival"</span>, <span class="at">palette=</span><span class="st">"Set1"</span>) <span class="sc">+</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Price Distribution by Festival"</span>,</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">x =</span> <span class="st">"Price (£)"</span>,</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> <span class="st">"Count"</span>) <span class="sc">+</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_y_continuous</span>(<span class="at">labels =</span> <span class="sc">~</span> . <span class="sc">*</span> <span class="dv">100</span>) <span class="sc">+</span> <span class="co"># Multiply the y-axis by 100</span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme</span>(<span class="at">legend.position=</span><span class="st">"top"</span>,</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust=</span>.<span class="dv">5</span>, <span class="at">face=</span><span class="st">"bold"</span>, <span class="at">size=</span><span class="dv">12</span>),</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>            <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">color=</span><span class="st">"black"</span>, <span class="at">size=</span><span class="dv">12</span>))</span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  })</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>In the first specific visualisation chosen, the widest price distribution is observed for Christmas gifts, with a peak density between £20–£50, with a long tail toward higher price points.This suggests that Christmas includes both affordable options for general consumers and luxury gifts for special purposes.</p>
+<p>However, A narrower price range with density concentrated under £30 reflects the lower cultural significance of gifting during the New Year. And the slightly higher prices extending into the luxury range reflects the romantic associations of Valentine’s Day, where symbolic or premium gifts are valued. <img src="Price%20Distribution.png" title="Example for Price distribution" class="img-fluid" alt="Example for Price distribution"></p>
+</div>
+<div id="tabset-2-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-4-tab">
+<p>The rating vs price scatter plot, explored the relationship between product price and customer ratings. Regression lines was added to identify trends. This allowed users to assess the correlation between pricing and satisfaction across festivals. Which reveals consumer expectations and purchasing motivations. It shows the influence of cultural values on consumer behaviour, like affordability for New Year and sentimentality for Valentine’s Day.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Rating vs Price Plot</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>rating_price_plot <span class="ot">&lt;-</span> <span class="fu">renderPlot</span>({</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">filtered_data</span>(), <span class="fu">aes</span>(<span class="at">x =</span> Price, <span class="at">y =</span> Rating, <span class="at">color =</span> festival)) <span class="sc">+</span></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.6</span>) <span class="sc">+</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Rating vs Price by Festival"</span>,</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>           <span class="at">x =</span> <span class="st">"Price (£)"</span>,</span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> <span class="st">"Rating"</span>) <span class="sc">+</span></span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_color_brewer</span>(<span class="st">"Festival"</span>, <span class="at">palette =</span> <span class="st">"Set1"</span>) <span class="sc">+</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme</span>(<span class="at">legend.position=</span><span class="st">"top"</span>,</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust=</span>.<span class="dv">5</span>, <span class="at">face=</span><span class="st">"bold"</span>, <span class="at">size=</span><span class="dv">12</span>),</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>            <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">color=</span><span class="st">"black"</span>, <span class="at">size=</span><span class="dv">12</span>))</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>  })</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>In the second specific visualisation chosen, where ratings for Christmas and valentine’s gifts are relatively consistent across price. Indicating that price has little impact on ratings. Emotional value might outweigh considerations of cost, reflecting the importance of Christmas and the intimate nature of Valentine’s day. But the slight decline as prices increase reflects that higher-priced gifts fail to meet heightened expectations.</p>
+<p>However, a sharper negative correlation between price and ratings for New Year gifts suggests that consumers prioritise affordability over extravagance, leading to dissatisfaction with expensive New Year gifts. <img src="Rating%20vs%20Price.png" title="Example for Rating vs Price" class="img-fluid" alt="Example for Rating vs Price"></p>
+</div>
+<div id="tabset-2-5" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-5-tab">
+<p>The product popularity bar chart effectively displayed the distribution of products across different BoughtCount for each festival. Showing the purchasing trend and highlighting popular gift choices during festive seasons. By categorising products based on purchasing frequency, the chart offered a clear view of consumer preferences. Which provids signals for inventory management and marketing strategies. For example, retailers could stock a higher volume of popular items during Christmas, whereas to maintain a balanced inventory to cater to diverse consumer preferences in other 2 festivals.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Popularity Plot</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Group and summarise data for the bar chart:</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>popularity_plot <span class="ot">&lt;-</span> <span class="fu">renderPlot</span>({</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    popularity_data <span class="ot">&lt;-</span> <span class="fu">filtered_data</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">group_by</span>(festival, BoughtCount) <span class="sc">%&gt;%</span>      <span class="co"># Categorise by festival and BoughtCount</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">summarise</span>(<span class="at">count =</span> <span class="fu">n</span>(), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="co"># Count the number of products in each category</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(popularity_data, </span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>           <span class="fu">aes</span>(<span class="at">x =</span> festival, <span class="at">y =</span> count, <span class="at">fill =</span> BoughtCount)) <span class="sc">+</span></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>      <span class="fu">geom_col</span>(<span class="at">width=</span>.<span class="dv">5</span>, <span class="at">col=</span><span class="st">"black"</span>, <span class="at">alpha=</span>.<span class="dv">7</span>, <span class="at">position =</span> <span class="st">"dodge"</span>) <span class="sc">+</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Product Popularity by Festival"</span>,</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>           <span class="at">x =</span> <span class="st">"Festival"</span>,</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>           <span class="at">y =</span> <span class="st">"Number of Products"</span>) <span class="sc">+</span></span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>      <span class="fu">scale_fill_brewer</span>(<span class="at">palette =</span> <span class="st">"Set2"</span>) <span class="sc">+</span></span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a>      <span class="fu">theme</span>(<span class="at">legend.position=</span><span class="st">"top"</span>,</span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a>            <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust=</span>.<span class="dv">5</span>, <span class="at">face=</span><span class="st">"bold"</span>, <span class="at">size=</span><span class="dv">12</span>),</span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>            <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">color=</span><span class="st">"black"</span>, <span class="at">size=</span><span class="dv">12</span>))</span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>  })</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>For the specific visualisation chosen, Christmas gifts showed huge popularity, with most products are in the “Over 10,000” category. This reflects the cultural significance of Christmas as a season of giving, which drives high consumer demand. Whereas for New Year, the majority of products fall into the “100–1000” categories, indicating relatively low consumer engagement. This aligns with New Year’s focus on celebration rather than material exchanges.</p>
+<p>However, a balanced distribution of Valentine’s gifts across all categories reflects the diverse ways people celebrate Valentine’s Day, from kisses to luxurious expressions of love. <img src="Popular%20products.png" title="Example for Rating vs Price" class="img-fluid" alt="Example for Rating vs Price"></p>
+</div>
+<div id="tabset-2-6" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-6-tab">
+<p>The final component of the dashboard was an interactive data table. This table allowed users to browse the dataset, apply filters, and sort columns to explore specific details. It served as a complementary tool for users who wanted to delve deeper into the raw data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Interactive Data Table</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  output<span class="sc">$</span>data_table <span class="ot">&lt;-</span> <span class="fu">renderDT</span>({</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filtered_data</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">select</span>(Name, Rating, RatingCount, Price, festival, BoughtCount, DeliveryFree) <span class="sc">%&gt;%</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">datatable</span>(<span class="at">options =</span> <span class="fu">list</span>(<span class="at">pageLength =</span> <span class="dv">10</span>)) <span class="co"># Formating the table with pages (10 rows per page)</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  })</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="er">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+<div id="tabset-2-7" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-7-tab">
+<div class="cell">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine the UI and Server to launch the app</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a><span class="fu">shinyApp</span>(<span class="at">ui =</span> ui, <span class="at">server =</span> server)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="ai-engagement" class="level1">
+<h1>AI engagement</h1>
+<p>One of the key contributions of ChatGPT was its assistance in improving the robustness of the web scraping script. My original approach failed whenever a product did not include a rating, and halts the entire function.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Original code without error handling</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>rating <span class="ot">&lt;-</span> product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> <span class="st">".//div[@data-cy='reviews-block']/div[1]/span[1]//a"</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>)<span class="sc">$</span><span class="fu">getElementAttribute</span>(<span class="st">"aria-label"</span>)[[<span class="dv">1</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>ChatGPT suggested the use of <strong>tryCatch()</strong> method, ensuring it continues executing even when some data fields were missing. So it is easier to adapt to variations in the webpage’s structure.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Improved code with error handling</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>rating <span class="ot">&lt;-</span> <span class="fu">tryCatch</span>(</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  product_containers[[i]]<span class="sc">$</span><span class="fu">findChildElement</span>(</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">using =</span> <span class="st">"xpath"</span>, </span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> <span class="st">".//div[@data-cy='reviews-block']/div[1]/span[1]//a"</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  )<span class="sc">$</span><span class="fu">getElementAttribute</span>(<span class="st">"aria-label"</span>)[[<span class="dv">1</span>]],</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">error =</span> <span class="cf">function</span>(e) <span class="cn">NA</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Furthermore, my original method for cleaning the Price variable relied on <strong>parse_number()</strong> method to extract numeric values. However, this approach removed decimals, leading to inaccuracies in the cleaned dataset.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Original code</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>Price <span class="ot">=</span> <span class="fu">parse_number</span>(Price),</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>ChatGPT recommended to regular expressions to handle complex price formats (e.g.&nbsp;<strong>“$9”</strong> or <strong>“$103”</strong>) while keeping decimal values ensuring accuracy.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Improved code</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>Price <span class="ot">=</span> <span class="fu">as.numeric</span>(<span class="fu">str_remove_all</span>(Price, <span class="st">"</span><span class="sc">\\</span><span class="st">$|</span><span class="sc">\\</span><span class="st">s|</span><span class="sc">\\</span><span class="st">n"</span>)) <span class="sc">/</span> <span class="dv">100</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Also, in my original method for categorising the BoughtCount variable, regular expressions were used to detect specific patterns such as “K+” or numeric values followed by “+”. This approach was limited when producing higher thresholds catagories like “10K+” or beyond.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Original code:</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>BoughtCount <span class="ot">=</span> <span class="fu">case_when</span>(</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># K\\+ to detect any strings that contain "k" followed immediately by a "+" sign</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str_detect</span>(BoughtCount, <span class="st">"K</span><span class="sc">\\</span><span class="st">+"</span>) <span class="sc">~</span> <span class="st">"Over 1000"</span>,</span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># \\d+\\+ to detect any strings that contain a digit sequence followed immediately by a "+" signb </span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">str_detect</span>(BoughtCount, <span class="st">"</span><span class="sc">\\</span><span class="st">d+</span><span class="sc">\\</span><span class="st">+"</span>) <span class="sc">~</span> <span class="st">"100-1000"</span>,</span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Less than 100"</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>ChatGPT suggested a more scalable method by first parsing numeric values and then categorising them based on predefined thresholds. This allowed for greater flexibility and accuracy, including the ability to handle other complex formats.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># First parse the raw number, ignoring plus signs or other text (e.g. "2.5K+" -&gt; 2.5, etc).</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>count <span class="ot">=</span> <span class="fu">parse_number</span>(BoughtCount)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="co"># If the text contains 'K', multiply the parsed number by 1000, otherwise return itself.</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>count <span class="ot">=</span> <span class="fu">if_else</span>(<span class="fu">str_detect</span>(BoughtCount, <span class="st">"K"</span>), count <span class="sc">*</span> <span class="dv">1000</span>, count)</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Then bin into categories based on numeric thresholds</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>BoughtCount <span class="ot">=</span> <span class="fu">case_when</span>(</span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  count <span class="sc">&gt;=</span> <span class="dv">10000</span> <span class="sc">~</span> <span class="st">"Over 10000"</span>,</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  count <span class="sc">&gt;=</span> <span class="dv">1000</span> <span class="sc">~</span> <span class="st">"Over 1000"</span>,</span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>  count <span class="sc">&gt;=</span> <span class="dv">100</span> <span class="sc">~</span> <span class="st">"100-1000"</span>,</span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>  <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"Less than 100"</span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>In the visualisation section, ChatGPT suggested scaling the y-axis by a factor of 100 in the price distribution plot. This adjustment improved the readability of the plot and made it easier for users to interpret the data.</p>
+<p>While ChatGPT offered valuable assistance in refining my coding techniques, it also had certain limitations. Certain suggestions, like categorising the “BoughtCount” variable with regular expressions, was efficient but initially unfamiliar. These suggesttions can be hard to understand and demanded extra time to study and understand the logic, which could be a barrier for many researchers in such techniques, particularly when doing time-constrained projects.</p>
+<p>Overall, ChatGPT significantly improved the project’s efficiency and accuracy while broadening my understanding of computational tools and best practices. The advanced techniques suggested, like <strong>tryCatch()</strong> for error handling or refining data transformations with regular expressions, introduced me to new concepts, which gave me confidence in tackling complex problems. Despite the occasional complexity of its suggestions may require additional learning to implement, these highlight the importance of human oversight. Which reinforced my role as a decision maker, balancing AI-driven suggestions with practical feasibility.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
